@@ -1,5 +1,6 @@
 import os, argparse
 import numpy as np
+import cv2
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -8,9 +9,11 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch.backends.cudnn as cudnn
 import torchvision
+import glob
+from PIL import Image, ImageOps
 
 import datasets
-from utils import select_device, natural_keys, gazeto3d, angular, getArch
+from utils import select_device, draw_gaze
 from model import L2CS
 
 def parse_args():
@@ -46,7 +49,7 @@ def getArch(arch,bins):
         model = L2CS( torchvision.models.resnet.BasicBlock,[3, 4,  6, 3], bins)
     elif arch == 'ResNet101':
         model = L2CS( torchvision.models.resnet.Bottleneck,[3, 4, 23, 3], bins)
-    elif   == 'ResNet152':
+    elif arch  == 'ResNet152':
         model = L2CS( torchvision.models.resnet.Bottleneck,[3, 8, 36, 3], bins)
     else:
         if arch != 'ResNet50':
@@ -59,15 +62,11 @@ def getArch(arch,bins):
 if __name__ == '__main__':
     args = parse_args()
     cudnn.enabled = True
-    gpu = select_device(args.gpu_id, batch_size=args.batch_size)
-    batch_size = args.batch_size
-    arch = args.arch
-    data_set = args.dataset
-    evalpath = args.evalpath
+    arch=args.arch
+    batch_size = 1
+    cam = args.cam_id
+    gpu = select_device(args.gpu_id, batch_size=batch_size)
     snapshot_path = args.snapshot
-    bins = args.bins
-    angle = args.angle
-    bin_width = args.bin_width
 
     transformations = transforms.Compose([
         transforms.Resize(448),
@@ -77,32 +76,57 @@ if __name__ == '__main__':
             std=[0.229, 0.224, 0.225]
         )
     ])
+    model=getArch(arch, 90)
+    print('Loading snapshot.')
+    saved_state_dict = torch.load(snapshot_path)
+    model.load_state_dict(saved_state_dict)
+    model.cuda(gpu)
+    model.eval()
 
-    import glob
-    print(glob.glob("/home/adam/*"))
 
+    softmax = nn.Softmax(dim=1)
+    idx_tensor = [idx for idx in range(90)]
+    idx_tensor = torch.FloatTensor(idx_tensor).cuda(gpu)
+    x=0
+    file_imgs = glob.glob(args.impath + '*.jpg')
+    id_img = 0
     with torch.no_grad():
         while True:
-            if faces is not None:
-                    img = cv2.resize(img, (224, 224))
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    im_pil = Image.fromarray(img)
-                    img = transformations(im_pil)
-                    img = Variable(img).cuda(gpu)
-                    img = img.unsqueeze(0)
+            img = cv2.cvtColor(cv2.imread(file_imgs[id_img]), cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img, (224, 224))
+            im_pil = Image.fromarray(img)
+            im_pil = transformations(im_pil)
+            im_pil = Variable(im_pil).cuda(gpu)
+            im_pil = im_pil.unsqueeze(0)
 
-                    # gaze prediction
-                    gaze_pitch, gaze_yaw = model(img)
+            # gaze prediction
+            gaze_pitch, gaze_yaw = model(im_pil)
 
-                    pitch_predicted = softmax(gaze_pitch)
-                    yaw_predicted = softmax(gaze_yaw)
+            pitch_predicted = softmax(gaze_pitch)
+            yaw_predicted = softmax(gaze_yaw)
 
-                    # Get continuous predictions in degrees.
-                    pitch_predicted = torch.sum(pitch_predicted.data[0] * idx_tensor) * 4 - 180
-                    yaw_predicted = torch.sum(yaw_predicted.data[0] * idx_tensor) * 4 - 180
+            # Get continuous predictions in degrees.
+            pitch_predicted = torch.sum(pitch_predicted.data[0] * idx_tensor) * 4 - 180
+            yaw_predicted = torch.sum(yaw_predicted.data[0] * idx_tensor) * 4 - 180
+            cv2.putText(img, f'angles: {pitch_predicted:.0f}, {yaw_predicted:.0f}', (0, 20),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)
+            pitch_predicted = pitch_predicted.cpu().detach().numpy() * np.pi / 180.0
+            yaw_predicted = yaw_predicted.cpu().detach().numpy() * np.pi / 180.0
 
-                    pitch_predicted = pitch_predicted.cpu().detach().numpy() * np.pi / 180.0
-                    yaw_predicted = yaw_predicted.cpu().detach().numpy() * np.pi / 180.0
+            draw_gaze(0,0,224, 224,img,(pitch_predicted,yaw_predicted),color=(0,0,255))
 
-                    draw_gaze(x_min,y_min,bbox_width, bbox_height,frame,(pitch_predicted,yaw_predicted),color=(0,0,255))
-                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0,255,0), 1)
+
+            cv2.imshow("Demo", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+            key = cv2.waitKey(5)
+            if key & 0xFF == 27:
+                break
+
+            if key & 0xFF == ord('n'):
+                id_img += 1
+                if id_img > len(file_imgs)-1:
+                    id_img = 0
+
+            if key & 0xFF == ord('p'):
+                id_img -= 1
+                if id_img < 0:
+                    id_img = len(file_imgs) - 1
