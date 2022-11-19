@@ -4,9 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< HEAD
     <list default="true" id="fa3aadb3-d83f-4e9f-917f-79ef601b6c05" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
     </list>
+=======
+    <list default="true" id="fa3aadb3-d83f-4e9f-917f-79ef601b6c05" name="Changes" comment="" />
+>>>>>>> parent of 7c2ea287 (added images to folder)
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -30,11 +34,15 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
-  </component>
-  <component name="RunManager" selected="Python.demo">
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "G:/My Drive/projects/regaze_with_recording_product",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  }
+}]]></component>
+  <component name="RunManager" selected="Python.testrun">
     <configuration name="demo" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="L2CS-Net" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -103,6 +111,5 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
 </project>
